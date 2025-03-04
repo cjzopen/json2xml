@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <title>多工作表 Excel 產生器（自訂兩層分類）</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+</head>
+<body>
+
+<button onclick="generateExcel()">下載 Excel</button>
+
+<script>
+function generateExcel() {
+  fetch('1.json')
+    .then(response => response.json())
+    .then(data => {
+      const wb = XLSX.utils.book_new();
+      const sheets = {};
+
+      data.forEach(item => {
+        const sheetName = getSheetNameFromLink(item.link);
+        if (!sheets[sheetName]) {
+          sheets[sheetName] = [];
+        }
+        sheets[sheetName].push(item);
+      });
+
+      Object.entries(sheets).forEach(([name, rows]) => {
+        const ws = XLSX.utils.json_to_sheet(rows);
+        XLSX.utils.book_append_sheet(wb, ws, name);
+      });
+
+      XLSX.writeFile(wb, 'output.xlsx');
+    })
+    .catch(err => {
+      alert('載入 1.json 失敗，請確認檔案位置與伺服器設定');
+      console.error(err);
+    });
+}
+
+// function getSheetNameFromLink(link) {
+//     link = link.toLowerCase();
+//     const parts = link.split('/');
+//     const twIndex = parts.indexOf('tw');
+//     if (twIndex === -1) return 'home';
+
+//     if (twIndex + 2 < parts.length && parts[twIndex + 3]) {
+//         // 提取第二層和第三層路徑，並將它們組合起來作為工作表名稱
+//         const secondPart = parts[twIndex + 1];
+//         const thirdPart = parts[twIndex + 2];
+//         return secondPart + '-' + thirdPart;
+//     } else if (twIndex + 1 < parts.length && !parts[twIndex + 1].includes('.')) {
+//         // 如果只有第二層路徑，則使用它作為工作表名稱
+//         return parts[twIndex + 1];
+//     } else {
+//         return 'home';
+//     }
+// }
+function getSheetNameFromLink(link) {
+  link = link.toLowerCase();
+  const parts = link.split('/');
+  const twIndex = parts.indexOf('tw');
+  if (twIndex === -1) return 'home';
+
+  let sheetName = 'home'; // 預設值
+  if (twIndex + 2 < parts.length && parts[twIndex + 3]) {
+    const secondPart = parts[twIndex + 1];
+    const thirdPart = parts[twIndex + 2];
+    sheetName = secondPart + '-' + thirdPart;
+  } else if (twIndex + 1 < parts.length && !parts[twIndex + 1].includes('.')) {
+    sheetName = parts[twIndex + 1];
+  }
+
+  // 移除非法字元
+  sheetName = sheetName.replace(/[\\/?\*[\]]/g, '');
+
+  // 限制字元長度
+  if (sheetName.length > 31) {
+    sheetName = sheetName.substring(0, 31);
+  }
+  return sheetName;
+}
+</script>
+
+</body>
+</html>
